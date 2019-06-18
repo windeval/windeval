@@ -4,21 +4,21 @@
 import xarray as xr
 
 
+def _has_degenerate_time_dependece(dobj):
+
+    has_deg_time_dep = any(d == "time" for d in dobj.dims)
+    has_deg_time_dep &= dobj.astype('float').var("time").max() == 0.0
+
+    return has_deg_time_dep
+
+
 def convert_to_station(ds):
     """Convert ds to station representation.
 
     Station data have no time dependent spatial coords.
     """
-    def _has_degenerate_time_dependece(coord):
-        dobj = ds.coords[coord]
-
-        has_deg_time_dep = any(d == "time" for d in dobj.dims)
-        has_deg_time_dep &= dobj.astype('float').var("time").max() == 0.0
-
-        return has_deg_time_dep
-
-    for coord in filter(_has_degenerate_time_dependece, ds.coords):
-        ds.coords[coord] = ds.coords[coord].mean("time")
+    for coord in filter(_has_degenerate_time_dependece, ds.coords.values()):
+        ds.coords[coord.name] = coord.mean("time")
 
     ds = ds.squeeze()
 
