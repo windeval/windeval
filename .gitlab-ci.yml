@@ -1,0 +1,18 @@
+image: git.geomar.de:11411/wind-products/windeval_docker:v1.0.0
+before_script:
+  - source activate windeval
+
+pytest_and_coverage:
+  stage: test
+  script:
+    - pip install -e .
+    - |
+      pytest -v \
+        --cov=windeval --cov-report="term-missing" \
+        windeval/tests/
+
+lint:
+  stage: test
+  allow_failure: false
+  script:
+    - flake8 windeval/
