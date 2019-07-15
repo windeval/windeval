@@ -4,7 +4,7 @@
 import xarray as xr
 import numpy as np
 
-from windeval import (convert_to_station, convert_to_sequence)
+from windeval import convert_to_station, convert_to_sequence
 
 
 def assert_all_vars_and_coords_equal(ds0, ds1):
@@ -28,15 +28,14 @@ def test_roundtrip_sequence_station():
             "time": xr.DataArray(
                 np.datetime64("2001-01-01")
                 + np.arange(100) * np.timedelta64(1, "D"),
-                dims=("time", )),
-            "space": xr.DataArray(
-                -23,
-                dims=()
-            )
+                dims=("time",),
+            ),
+            "space": xr.DataArray(-23, dims=()),
         }
     )
 
     ds_sequence = convert_to_sequence(ds_station)
 
-    assert_all_vars_and_coords_equal(ds_station,
-                                     convert_to_station(ds_sequence))
+    assert_all_vars_and_coords_equal(
+        ds_station, convert_to_station(ds_sequence)
+    )
