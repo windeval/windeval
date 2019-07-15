@@ -1,4 +1,4 @@
-image: git.geomar.de:11411/wind-products/windeval_docker:v1.0.0
+image: git.geomar.de:11411/wind-products/windeval_docker:v1.1.0
 before_script:
   - source activate windeval
 
@@ -16,3 +16,4 @@ lint:
   allow_failure: false
   script:
     - flake8 windeval/
+    - black --check windeval/
