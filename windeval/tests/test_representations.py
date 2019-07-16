@@ -26,8 +26,7 @@ def test_roundtrip_sequence_station():
     ds_station = xr.Dataset(
         coords={
             "time": xr.DataArray(
-                np.datetime64("2001-01-01")
-                + np.arange(100) * np.timedelta64(1, "D"),
+                np.datetime64("2001-01-01") + np.arange(100) * np.timedelta64(1, "D"),
                 dims=("time",),
             ),
             "space": xr.DataArray(-23, dims=()),
@@ -36,6 +35,4 @@ def test_roundtrip_sequence_station():
 
     ds_sequence = convert_to_sequence(ds_station)
 
-    assert_all_vars_and_coords_equal(
-        ds_station, convert_to_station(ds_sequence)
-    )
+    assert_all_vars_and_coords_equal(ds_station, convert_to_station(ds_sequence))
