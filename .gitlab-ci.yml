@@ -15,5 +15,5 @@ lint:
   stage: test
   allow_failure: false
   script:
-    - flake8 windeval/
+    - flake8 windeval/ --max-line-length=88
     - black --check windeval/
