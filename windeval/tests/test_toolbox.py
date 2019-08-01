@@ -3,8 +3,23 @@
 
 import xarray as xr
 import numpy as np
+import pytest
 
-from windeval import convert_to_station, convert_to_sequence
+from windeval.toolbox import convert_to_station, convert_to_sequence
+
+
+@pytest.fixture
+def ds_station():
+    xr_dataset_obj = xr.Dataset(
+        coords={
+            "time": xr.DataArray(
+                np.datetime64("2001-01-01") + np.arange(100) * np.timedelta64(1, "D"),
+                dims=("time",),
+            ),
+            "space": xr.DataArray(-23, dims=()),
+        }
+    )
+    return xr_dataset_obj
 
 
 def assert_all_vars_and_coords_equal(ds0, ds1):
@@ -21,18 +36,6 @@ def assert_all_vars_and_coords_equal(ds0, ds1):
     assert all(coord in ds0.coords for coord in ds1.coords)
 
 
-def test_roundtrip_sequence_station():
-
-    ds_station = xr.Dataset(
-        coords={
-            "time": xr.DataArray(
-                np.datetime64("2001-01-01") + np.arange(100) * np.timedelta64(1, "D"),
-                dims=("time",),
-            ),
-            "space": xr.DataArray(-23, dims=()),
-        }
-    )
-
+def test_roundtrip_sequence_station(ds_station):
     ds_sequence = convert_to_sequence(ds_station)
-
     assert_all_vars_and_coords_equal(ds_station, convert_to_station(ds_sequence))
