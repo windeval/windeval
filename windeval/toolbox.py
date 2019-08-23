@@ -6,8 +6,9 @@ import xarray as xr
 
 def _has_degenerate_time_dependence(dobj):
 
-    has_deg_time_dep = any(d == "time" for d in dobj.dims)
-    has_deg_time_dep &= dobj.astype("float").var("time").max() == 0.0
+    has_deg_time_dep = any(d == "time" for d in dobj.dims) and (
+        dobj.astype("float").var("time").max() == 0.0
+    )
 
     return has_deg_time_dep
 

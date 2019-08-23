@@ -55,6 +55,10 @@ def test_roundtrip_sequence_station(ds_station):
     assert_all_vars_and_coords_equal(ds_station, convert_to_station(ds_sequence))
 
 
+def test_stationarity_of_coversion(ds_station):
+    assert_all_vars_and_coords_equal(ds_station, convert_to_station(ds_station))
+
+
 def test_data_files_available(test_data_files):
     assert len(test_data_files) > 0
 
@@ -63,3 +67,10 @@ def test_loaded_data_has_no_singleton_dims(test_data_files):
     for data_file in test_data_files:
         ds = load_pirata_data_set(data_file)
         assert all(v != 1 for v in ds.dims.values())
+
+
+def test_roundtrip_sequence_station_real_data(test_data_files):
+    for data_file in test_data_files:
+        ds_from_disk = load_pirata_data_set(data_file)
+        ds_sequence = convert_to_sequence(ds_from_disk)
+        assert_all_vars_and_coords_equal(ds_from_disk, convert_to_station(ds_sequence))
