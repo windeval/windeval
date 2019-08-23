@@ -1,11 +1,15 @@
 """Test data representations."""
 
-
 import xarray as xr
 import numpy as np
+from pathlib import Path
 import pytest
 
-from windeval.toolbox import convert_to_station, convert_to_sequence
+from windeval.toolbox import (
+    convert_to_station,
+    convert_to_sequence,
+    load_pirata_data_set,
+)
 
 
 @pytest.fixture
@@ -20,6 +24,16 @@ def ds_station():
         }
     )
     return xr_dataset_obj
+
+
+@pytest.fixture
+def test_rootdir():
+    return Path(__file__).parent
+
+
+@pytest.fixture
+def test_data_files(test_rootdir):
+    return list((test_rootdir / "test_data").glob("**/*.cdf"))
 
 
 def assert_all_vars_and_coords_equal(ds0, ds1):
@@ -39,3 +53,13 @@ def assert_all_vars_and_coords_equal(ds0, ds1):
 def test_roundtrip_sequence_station(ds_station):
     ds_sequence = convert_to_sequence(ds_station)
     assert_all_vars_and_coords_equal(ds_station, convert_to_station(ds_sequence))
+
+
+def test_data_files_available(test_data_files):
+    assert len(test_data_files) > 0
+
+
+def test_loaded_data_has_no_singleton_dims(test_data_files):
+    for data_file in test_data_files:
+        ds = load_pirata_data_set(data_file)
+        assert all(v != 1 for v in ds.dims.values())
