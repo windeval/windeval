@@ -17,3 +17,19 @@ lint:
   script:
     - flake8 windeval/ --max-line-length=88
     - black --check windeval/
+
+pages:
+  stage: deploy
+  script:
+    - apt-get update && apt-get install make
+    - pip install sphinx recommonmark sphinx_rtd_theme sphinx-autodoc-typehints
+    - cd doc/
+    - make clean
+    - make html
+    - cd ..
+    - mv doc/_build/html/ public/
+  artifacts:
+    paths:
+      - public
+  only:
+    - master
