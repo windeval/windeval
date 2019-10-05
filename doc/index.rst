@@ -21,7 +21,8 @@ https://docs.readthedocs.io/en/stable/index.html
    :maxdepth: 2
    :caption: Modules
 
-   _source/modules
+   _source/toolbox
+   _source/processing
 
 .. toctree::
    :maxdepth: 2
