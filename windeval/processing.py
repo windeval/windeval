@@ -37,11 +37,29 @@ class BulkFormula:
         | *A note on parameterizations of the drag coefficient*.
         | A. Köhl and P. Heimbach, August 15, 2007.
 
-
     """
 
-    @classmethod
-    def ncep_ncar_2007(cls) -> float:
+    def __init__(
+        self, drag_coefficient: str = "ncep_ncar_2007", bulk_formula: str = "generic"
+    ):
+        self.Cd = getattr(self, drag_coefficient.lower())
+        self.calculate = getattr(self, bulk_formula.lower())
+
+    def generic(self, **kwargs) -> np.ndarray:
+        """Definition of generic bulk formula.
+
+        .. math::
+
+            \\tau = \\rho C_D \\mathopen|\\Delta U\\mathclose| \\Delta U
+
+        :return: Wind stress.
+
+        """
+        rho = kwargs.pop("rho")
+        u = kwargs.pop("u")
+        return rho * self.Cd(**kwargs) * kwargs["U"] * u
+
+    def ncep_ncar_2007(self, U: np.ndarray = np.ndarray) -> np.ndarray:
         """NCEP/NCAR from Köhl and Heimbach, 2007. [KH07]_
 
         .. math::
@@ -57,12 +75,12 @@ class BulkFormula:
 
         """
 
-        Cd = 1.3 * 1e-3
+        Cd = np.empty(U.shape)
+        Cd.fill(1.3e-3)
 
         return Cd
 
-    @classmethod
-    def large_and_pond_1981(cls, U: float) -> float:
+    def large_and_pond_1981(self, U: np.ndarray = np.ndarray) -> np.ndarray:
         """Large and Pond, 1981. [LP81]_
 
         .. math::
@@ -81,23 +99,20 @@ class BulkFormula:
         :param U: Absolute wind speed at 10 meter height.
         :return: Drag coefficient.
 
-
         """
 
-        if 4 <= U and U < 11:
-            Cd = 1.2 * 1e-3
-        elif 11 <= U and U <= 25:
-            Cd = (0.49 + 0.065 * U) * 1e-3
-        else:
-            raise ValueError(
-                "Bulk-formula is not defined for values outside of the "
-                + "interval I = [4, 25]"
-            )
+        Cd = np.empty(U.shape)
+        Cd.fill(np.nan)
+
+        interval1 = np.logical_and(4 <= U, U < 11)
+        interval2 = np.logical_and(11 <= U, U <= 25)
+
+        Cd[interval1] = 1.2e-3
+        Cd[interval2] = (0.49 + 0.065 * U[interval2]) * 1e-3
 
         return Cd
 
-    @classmethod
-    def yelland_and_taylor_1996(cls, U: float) -> float:
+    def yelland_and_taylor_1996(self, U: np.ndarray = np.ndarray) -> np.ndarray:
         """Yelland and Taylor, 1996. [YT96]_
 
         .. math::
@@ -118,20 +133,23 @@ class BulkFormula:
 
         """
 
-        if 3 <= U and U < 6:
-            Cd = (0.29 + 3.1 / U + 7.7 / U ** 2) * 1e-3
-        elif 6 <= U and U <= 26:
-            Cd = (0.6 + 0.07 * U) * 1e-3
-        else:
-            raise ValueError(
-                "Bulk-formula is not defined for values outside of the "
-                + "interval I = [3, 26]"
-            )
+        Cd = np.empty(U.shape)
+        Cd.fill(np.nan)
+
+        interval1 = np.logical_and(3 <= U, U < 6)
+        interval2 = np.logical_and(6 <= U, U <= 26)
+
+        Cd[interval1] = (0.29 + 3.1 / U[interval1] + 7.7 / U[interval1] ** 2) * 1e-3
+        Cd[interval2] = (0.6 + 0.07 * U[interval2]) * 1e-3
 
         return Cd
 
-    @classmethod
-    def kara_etal_2000(cls, V_a: float, T_s: float, T_a: float) -> float:
+    def kara_etal_2000(
+        self,
+        U: np.ndarray = np.ndarray,
+        T_a: np.ndarray = np.ndarray,
+        T_s: np.ndarray = np.ndarray,
+    ) -> np.ndarray:
         """Kara et al., 2000. [K00]_
 
         .. math::
@@ -144,14 +162,20 @@ class BulkFormula:
                 (0.1034 - 0.00678 \\hat{V}_a - 0.0001147 (\\hat{V}_a)^2) \\times 10^{-3}
             \\end{align}
 
-        :param V_a: Absolute wind speed at 10 meter height.
+        .. math::
+
+            \\hat{V}_a = \\text{max}(2.5, \\text{min}(32.5, V_a))
+
+        :param U: (V_a) Absolute wind speed at 10 meter height.
         :param T_s: Sea surface temperature.
         :param T_a: Air temperature.
         :return: Drag coefficient.
 
         """
 
-        V_hat_a = np.max([2.5, np.min([32.5, V_a])])
+        # naming according to source
+        V_a = U
+        V_hat_a = np.maximum(2.5, np.minimum(32.5, V_a))
 
         C_d0 = (0.862 + 0.088 * V_hat_a - 0.00089 * V_hat_a ** 2) * 1e-3
         C_d1 = (0.1034 - 0.00678 * V_hat_a + 0.0001147 * V_hat_a ** 2) * 1e-3
@@ -160,8 +184,7 @@ class BulkFormula:
 
         return Cd
 
-    @classmethod
-    def trenberth_etal_1990(cls, U: float) -> float:
+    def trenberth_etal_1990(self, U: np.ndarray = np.ndarray) -> np.ndarray:
         """Trenberth, Large and Olson, 1990. [T90]_
 
         .. math::
@@ -188,19 +211,23 @@ class BulkFormula:
         some differences to the current implementation.
 
         """
-        if U <= 1:
-            Cd = 2.18 * 1e-3
-        elif 1 < U and U <= 3:
-            Cd = (0.62 + 1.56 / U) * 1e-3
-        elif 3 < U and U < 10:
-            Cd = 1.14 * 1e-3
-        else:
-            Cd = (0.49 + 0.065 * U) * 1e-3
+
+        Cd = np.empty(U.shape)
+        Cd.fill(np.nan)
+
+        interval1 = U <= 1
+        interval2 = np.logical_and(1 < U, U <= 3)
+        interval3 = np.logical_and(3 < U, U < 10)
+        interval4 = 10 <= U
+
+        Cd[interval1] = 2.18e-3
+        Cd[interval2] = (0.62 + 1.56 / U[interval2]) * 1e-3
+        Cd[interval3] = 1.14e-3
+        Cd[interval4] = (0.49 + 0.065 * U[interval4]) * 1e-3
 
         return Cd
 
-    @classmethod
-    def large_and_yeager_2004(cls, U: float) -> float:
+    def large_and_yeager_2004(self, U: np.ndarray = np.ndarray) -> np.ndarray:
         """Large and Yeager, 2004. [LY04]_
 
         .. math::
@@ -218,9 +245,11 @@ class BulkFormula:
 
         """
 
-        if U == 0:
-            raise ValueError("Bulk-formula is not defined for U = 0")
-        else:
-            Cd = (0.142 + 0.076 * U + 2.7 / U) * 1e-3
+        Cd = np.empty(U.shape)
+        Cd.fill(np.nan)
+
+        interval1 = U != 0
+
+        Cd[interval1] = (0.142 + 0.076 * U[interval1] + 2.7 / U[interval1]) * 1e-3
 
         return Cd
