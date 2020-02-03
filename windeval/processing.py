@@ -1,6 +1,8 @@
 """Preprocessing module."""
 
 import numpy as np
+import xarray as xr
+from typing import Callable, Union
 
 
 class BulkFormula:
@@ -42,10 +44,14 @@ class BulkFormula:
     def __init__(
         self, drag_coefficient: str = "ncep_ncar_2007", bulk_formula: str = "generic"
     ):
-        self.Cd = getattr(self, drag_coefficient.lower())
-        self.calculate = getattr(self, bulk_formula.lower())
+        self.Cd: Callable[..., Union[xr.DataArray, np.ndarray]] = getattr(
+            self, drag_coefficient.lower()
+        )
+        self.calculate: Callable[..., xr.DataArray] = getattr(
+            self, bulk_formula.lower()
+        )
 
-    def generic(self, **kwargs) -> np.ndarray:
+    def generic(self, X: xr.Dataset, component: str) -> xr.DataArray:
         """Definition of generic bulk formula.
 
         .. math::
@@ -55,11 +61,13 @@ class BulkFormula:
         :return: Wind stress.
 
         """
-        rho = kwargs.pop("rho")
-        u = kwargs.pop("u")
-        return rho * self.Cd(**kwargs) * kwargs["U"] * u
+        tau = (
+            X.air_density * self.Cd(X, component) * np.abs(X[component]) * X[component]
+        )
 
-    def ncep_ncar_2007(self, U: np.ndarray = np.ndarray) -> np.ndarray:
+        return tau
+
+    def ncep_ncar_2007(self, X: xr.Dataset, component: str) -> np.ndarray:
         """NCEP/NCAR from Köhl and Heimbach, 2007. [KH07]_
 
         .. math::
@@ -74,13 +82,13 @@ class BulkFormula:
         in [KH07]_.
 
         """
-
-        Cd = np.empty(U.shape)
-        Cd.fill(1.3e-3)
+        Cd = np.full(X[component].shape, 1.3e-3)
 
         return Cd
 
-    def large_and_pond_1981(self, U: np.ndarray = np.ndarray) -> np.ndarray:
+    def large_and_pond_1981(
+        self, X: xr.Dataset, component: str, extend_ranges: bool = False
+    ) -> xr.DataArray:
         """Large and Pond, 1981. [LP81]_
 
         .. math::
@@ -100,19 +108,19 @@ class BulkFormula:
         :return: Drag coefficient.
 
         """
-
-        Cd = np.empty(U.shape)
-        Cd.fill(np.nan)
-
-        interval1 = np.logical_and(4 <= U, U < 11)
-        interval2 = np.logical_and(11 <= U, U <= 25)
-
-        Cd[interval1] = 1.2e-3
-        Cd[interval2] = (0.49 + 0.065 * U[interval2]) * 1e-3
+        Cd = 1.2e-3 * (X[component] < 11) + (0.49 + X[component] * 0.065) * 1e-3 * (
+            X[component] > 11
+        )
+        if not extend_ranges:
+            Cd = np.where(
+                np.logical_and(4 <= X[component], X[component] <= 25), Cd, np.nan
+            )
 
         return Cd
 
-    def yelland_and_taylor_1996(self, U: np.ndarray = np.ndarray) -> np.ndarray:
+    def yelland_and_taylor_1996(
+        self, X: xr.Dataset, component: str, extend_ranges: bool = False
+    ) -> xr.DataArray:
         """Yelland and Taylor, 1996. [YT96]_
 
         .. math::
@@ -132,24 +140,25 @@ class BulkFormula:
         :return: Drag coefficient.
 
         """
-
-        Cd = np.empty(U.shape)
-        Cd.fill(np.nan)
-
-        interval1 = np.logical_and(3 <= U, U < 6)
-        interval2 = np.logical_and(6 <= U, U <= 26)
-
-        Cd[interval1] = (0.29 + 3.1 / U[interval1] + 7.7 / U[interval1] ** 2) * 1e-3
-        Cd[interval2] = (0.6 + 0.07 * U[interval2]) * 1e-3
+        epsilon = 1.0e-24
+        Cd = (
+            (
+                0.29
+                + 3.1 / (X[component] + epsilon)
+                + (7.7 / ((X[component] + epsilon) ** 2))
+            )
+            * (X[component] < 6)
+            * 1e-3
+            + (0.6 + X[component] * 0.07) * (X[component] >= 6) * 1e-3
+        )
+        if not extend_ranges:
+            Cd = np.where(
+                np.logical_and(3 <= X[component], X[component] <= 26), Cd, np.nan
+            )
 
         return Cd
 
-    def kara_etal_2000(
-        self,
-        U: np.ndarray = np.ndarray,
-        T_a: np.ndarray = np.ndarray,
-        T_s: np.ndarray = np.ndarray,
-    ) -> np.ndarray:
+    def kara_etal_2000(self, X: xr.Dataset, component: str) -> xr.DataArray:
         """Kara et al., 2000. [K00]_
 
         .. math::
@@ -172,19 +181,14 @@ class BulkFormula:
         :return: Drag coefficient.
 
         """
-
-        # naming according to source
-        V_a = U
-        V_hat_a = np.maximum(2.5, np.minimum(32.5, V_a))
-
+        V_hat_a = np.maximum(2.5, np.minimum(32.5, X[component]))
         C_d0 = (0.862 + 0.088 * V_hat_a - 0.00089 * V_hat_a ** 2) * 1e-3
         C_d1 = (0.1034 - 0.00678 * V_hat_a + 0.0001147 * V_hat_a ** 2) * 1e-3
-
-        Cd = C_d0 + C_d1 * (T_s - T_a)
+        Cd = C_d0 + C_d1 * (X.sea_surface_temperature - X.air_temperature)
 
         return Cd
 
-    def trenberth_etal_1990(self, U: np.ndarray = np.ndarray) -> np.ndarray:
+    def trenberth_etal_1990(self, X: xr.Dataset, component) -> xr.DataArray:
         """Trenberth, Large and Olson, 1990. [T90]_
 
         .. math::
@@ -211,23 +215,21 @@ class BulkFormula:
         some differences to the current implementation.
 
         """
-
-        Cd = np.empty(U.shape)
-        Cd.fill(np.nan)
-
-        interval1 = U <= 1
-        interval2 = np.logical_and(1 < U, U <= 3)
-        interval3 = np.logical_and(3 < U, U < 10)
-        interval4 = 10 <= U
-
-        Cd[interval1] = 2.18e-3
-        Cd[interval2] = (0.62 + 1.56 / U[interval2]) * 1e-3
-        Cd[interval3] = 1.14e-3
-        Cd[interval4] = (0.49 + 0.065 * U[interval4]) * 1e-3
+        epsilon = 1.0e-24
+        Cd = (
+            2.18e-3 * (X[component] <= 1)
+            + (0.62 + 1.56 / (X[component] + epsilon))
+            * 1.0e-3
+            * np.logical_and(1 < X[component], X[component] <= 3)
+            + 1.14e-3 * np.logical_and(3 < X[component], X[component] < 10)
+            + (0.49 + X[component] * 0.065) * 1.0e-3 * (10 <= X[component])
+        )
 
         return Cd
 
-    def large_and_yeager_2004(self, U: np.ndarray = np.ndarray) -> np.ndarray:
+    def large_and_yeager_2004(
+        self, X: xr.Dataset, component: str, extend_ranges: bool = False
+    ) -> xr.DataArray:
         """Large and Yeager, 2004. [LY04]_
 
         .. math::
@@ -244,12 +246,9 @@ class BulkFormula:
         :return: Drag coefficient.
 
         """
-
-        Cd = np.empty(U.shape)
-        Cd.fill(np.nan)
-
-        interval1 = U != 0
-
-        Cd[interval1] = (0.142 + 0.076 * U[interval1] + 2.7 / U[interval1]) * 1e-3
+        epsilon = 1.0e-24
+        Cd = ((0.142 + X[component] * 0.076 + 2.7 / (X[component] + epsilon))) * 1e-3
+        if not extend_ranges:
+            Cd = np.where((X[component] != 0), Cd, np.nan)
 
         return Cd
