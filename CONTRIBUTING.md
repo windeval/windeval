@@ -2,6 +2,15 @@
 
 Note that most of the following are copies or interpretations of the [scikit-learn#contributing](https://scikit-learn.org/dev/developers/contributing.html#contributing) guide. Feel free to see the more complete original and share your views to improve this adaptation of it.
 
+## Name Convention
+
+For variable names the [CF Standard Name Table (Version 70, 10 December 2019)](http://cfconventions.org/Data/cf-standard-names/70/build/cf-standard-name-table.html) is used.
+
+> Refer to the [Guidelines for Construction of CF Standard Names](http://cfconventions.org/Data/cf-standard-names/docs/guidelines.html) for information on how the names are constructed and interpreted, and how new names could be derived.
+>
+> **A note about units**
+> The canonical units associated with each standard name are usually the SI units for the quantity. [Section 3.3 of the CF conventions](http://cfconventions.org/cf-conventions/cf-conventions.html#standard-name) states: "Unless it is dimensionless, a variable with a standard_name attribute must have units which are physically equivalent (not necessarily identical) to the canonical units, possibly modified by an operation specified by either the standard name modifier ... or by the cell_methods attribute." Furthermore, [Section 1.3 of the CF conventions](http://cfconventions.org/cf-conventions/cf-conventions.html#_overview) states: "The values of the units attributes are character strings that are recognized by UNIDATA's Udunits package [UDUNITS], (with exceptions allowed as discussed in Section 3.1, “Units”)." For example, a variable with the standard name of "air_temperature" may have a units attribute of "degree_Celsius" because Celsius can be converted to Kelvin by Udunits. For the full range of supported units, refer to the [Udunits documentation](https://www.unidata.ucar.edu/software/udunits/udunits-current/doc/udunits/udunits2.html#Database). Refer to the [CF conventions](http://cfconventions.org/cf-conventions/cf-conventions.html) for full details of the units attribute.
+
 ## Contributing code
 
 If you wish to contribute to the windeval project you need to
