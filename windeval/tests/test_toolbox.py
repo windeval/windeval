@@ -33,7 +33,7 @@ def test_rootdir():
 
 @pytest.fixture
 def test_data_files(test_rootdir):
-    return list((test_rootdir / "test_data").glob("**/*.cdf"))
+    return list((test_rootdir / "test_data").glob("TAO*/**/*.cdf"))
 
 
 def assert_all_vars_and_coords_equal(ds0, ds1):
