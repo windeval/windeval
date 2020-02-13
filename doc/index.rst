@@ -6,9 +6,26 @@
 Welcome to windeval's documentation
 ===================================
 
-First steps towards a package documentation using Sphinx.
+Compare wind prodocts.
 
-https://docs.readthedocs.io/en/stable/index.html
+Tool Structure
+^^^^^^^^^^^^^^
+
+.. image:: _static/Tool_structure.png
+  :width: 700
+
+Planned logic:
+
+#. Load data using Intake_.
+#. Central data type is the Xarray-Dataset_.
+#. Process, analyse and manipulate data data with custom code mostly based on
+   Numpy_ and Xarray_.
+#. Plots may be summarized in reports.
+
+.. _Intake: https://intake.readthedocs.io/en/latest/?badge=latest
+.. _Numpy: https://numpy.org/
+.. _Xarray: http://xarray.pydata.org/en/stable/
+.. _Xarray-Dataset: http://xarray.pydata.org/en/stable/data-structures.html#dataset
 
 
 .. toctree::
@@ -21,8 +38,9 @@ https://docs.readthedocs.io/en/stable/index.html
    :maxdepth: 2
    :caption: Modules
 
-   _source/toolbox
+   _source/importer
    _source/processing
+   _source/analysis
 
 .. toctree::
    :maxdepth: 2
