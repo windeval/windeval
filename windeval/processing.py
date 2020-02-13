@@ -2,13 +2,13 @@
 
 import numpy as np
 import xarray as xr
-from typing import Callable, Union
+from typing import Callable, Union, Optional
 
 
 class BulkFormula:
-    """Example for bulk formula integration.
+    """Bulk formulas.
 
-    **Currently available formulas**
+    **Currently available formulas:**
 
     * Large and Pond, 1981 [LP81]_
     * Trenberth et al., 1990 [T90]_
@@ -17,6 +17,20 @@ class BulkFormula:
     * Large and Yeager, 2004 [LY04]_
     * NCEP/NCAR (Köhl and Heimbach, 2007) [KH07]_
 
+    Parameters
+    ----------
+    drag_coefficient : str
+        Wind product data as Xarray-DataSet.
+    bulk_formula : str
+        Name of the zonal or meridional wind component as defined by the [CF]_ naming
+        convention.
+
+    Attributes
+    ----------
+    Cd : callable
+        Drag coefficient selected by name from known definitions.
+    calculate : callable
+        Bulk formula selected by name from known definitions.
 
     References
     ----------
@@ -38,8 +52,12 @@ class BulkFormula:
     .. [KH07]
         | *A note on parameterizations of the drag coefficient*.
         | A. Köhl and P. Heimbach, August 15, 2007.
+    .. [CF]
+        | *CF Standard Name Table*.
+        | http://cfconventions.org/Data/cf-standard-names/70/build/cf-standard-name-table.html
 
-    """
+
+    """  # noqa: E501
 
     def __init__(
         self, drag_coefficient: str = "ncep_ncar_2007", bulk_formula: str = "generic"
@@ -56,9 +74,20 @@ class BulkFormula:
 
         .. math::
 
-            \\tau = \\rho C_D \\mathopen|\\Delta U\\mathclose| \\Delta U
+            \\tau = \\rho C_D \\mathopen|U\\mathclose| U
 
-        :return: Wind stress.
+        Parameters
+        ----------
+        X : array_like
+            Wind product data as Xarray-DataSet.
+        component : str
+            Name of the zonal or meridional wind component as defined by the CF_ naming
+            convention.
+
+        Returns
+        -------
+        array_like
+            Wind stress.
 
         """
         tau = (
@@ -74,7 +103,18 @@ class BulkFormula:
 
             C_d = 1.3 \\times 10^{-3}
 
-        :return: Constant drag coefficient.
+        Parameters
+        ----------
+        X : array_like
+            Wind product data as Xarray-DataSet.
+        component : str
+            Name of the zonal or meridional wind component as defined by the CF_ naming
+            convention.
+
+        Returns
+        -------
+        array_like
+            Constant drag coefficient.
 
         Notes
         -----
@@ -104,8 +144,21 @@ class BulkFormula:
             \\end{cases}
             \\end{equation}
 
-        :param U: Absolute wind speed at 10 meter height.
-        :return: Drag coefficient.
+        Parameters
+        ----------
+        X : array_like
+            Wind product data as Xarray-DataSet.
+        component : str
+            Name of the zonal or meridional wind component as defined by the CF_ naming
+            convention.
+        extend_ranges : bool, optional
+            Retrun values outside of bulk formulas definition (`True`) or not (`False`),
+            defaults to `False`.
+
+        Returns
+        -------
+        array_like
+            Drag coefficient.
 
         """
         Cd = 1.2e-3 * (X[component] < 11) + (0.49 + X[component] * 0.065) * 1e-3 * (
@@ -136,8 +189,21 @@ class BulkFormula:
             \\end{cases}
             \\end{equation}
 
-        :param U: Absolute wind speed at 10 meter height.
-        :return: Drag coefficient.
+        Parameters
+        ----------
+        X : array_like
+            Wind product data as Xarray-DataSet.
+        component : str
+            Name of the zonal or meridional wind component as defined by the CF_ naming
+            convention.
+        extend_ranges : bool, optional
+            Retrun values outside of bulk formulas definition (`True`) or not (`False`),
+            defaults to `False`.
+
+        Returns
+        -------
+        array_like
+            Drag coefficient.
 
         """
         epsilon = 1.0e-24
@@ -175,10 +241,18 @@ class BulkFormula:
 
             \\hat{V}_a = \\text{max}(2.5, \\text{min}(32.5, V_a))
 
-        :param U: (V_a) Absolute wind speed at 10 meter height.
-        :param T_s: Sea surface temperature.
-        :param T_a: Air temperature.
-        :return: Drag coefficient.
+        Parameters
+        ----------
+        X : array_like
+            Wind product data as Xarray-DataSet.
+        component : str
+            Name of the zonal or meridional wind component as defined by the CF_ naming
+            convention.
+
+        Returns
+        -------
+        array_like
+            Drag coefficient.
 
         """
         V_hat_a = np.maximum(2.5, np.minimum(32.5, X[component]))
@@ -206,8 +280,18 @@ class BulkFormula:
             \\end{cases}
             \\end{equation}
 
-        :param U: Absolute wind speed at 10 meter height.
-        :return: Drag coefficient.
+        Parameters
+        ----------
+        X : array_like
+            Wind product data as Xarray-DataSet.
+        component : str
+            Name of the zonal or meridional wind component as defined by the CF_ naming
+            convention.
+
+        Returns
+        -------
+        array_like
+            Drag coefficient.
 
         Notes
         -----
@@ -242,8 +326,21 @@ class BulkFormula:
             \\end{cases}
             \\end{equation}
 
-        :param U: Absolute wind speed at 10 meter height.
-        :return: Drag coefficient.
+        Parameters
+        ----------
+        X : array_like
+            Wind product data as Xarray-DataSet.
+        component : str
+            Name of the zonal or meridional wind component as defined by the CF_ naming
+            convention.
+        extend_ranges : bool, optional
+            Retrun values outside of bulk formulas definition (`True`) or not (`False`),
+            defaults to `False`.
+
+        Returns
+        -------
+        array_like
+            Drag coefficient.
 
         """
         epsilon = 1.0e-24
@@ -252,3 +349,155 @@ class BulkFormula:
             Cd = np.where((X[component] != 0), Cd, np.nan)
 
         return Cd
+
+
+def wind_speed(X: xr.Dataset) -> xr.Dataset:
+    """Calculate absolut windspeed from U and V.
+
+    Notes
+    -----
+    Spatial distances of U and V grid points are not taken into account.
+
+    .. math::
+
+        s = \\sqrt{u^2 + v^2}
+
+    Parameters
+    ----------
+    X : array_like
+        Wind product data as Xarray-DataSet.
+
+    Returns
+    -------
+    array_like
+        Absolute wind speed.
+
+    """
+    X["wind_speed"] = np.sqrt(
+        np.power(X.data_vars["eastward_wind"], 2)
+        + np.power(X.data_vars["northward_wind"], 2)
+    )
+
+    return X
+
+
+def surface_downward_eastward_stress(
+    X: xr.Dataset,
+    drag_coefficient: Optional[str] = None,
+    bulk_formula: Optional[str] = None,
+) -> xr.Dataset:
+    """Caclulate surface downward eastward stress.
+
+    Parameters
+    ----------
+    X : array_like
+        Wind product data as Xarray-DataSet.
+    drag_coefficient : str, optional
+        Name of drag coefficient method, defaults to :meth:`windeval.BulkFormula`'s
+        default.
+    bulk_formula : str, optional
+        Name of bulk formula method, defaults to :meth:`windeval.BulkFormula`'s default.
+
+    Returns
+    -------
+    array_like
+        Surface downward eastward stress.
+
+    """
+    X["surface_downward_eastward_stress"] = BulkFormula(
+        *[s for s in [drag_coefficient, bulk_formula] if s is not None]
+    ).calculate(X, "eastward_wind")
+
+    return X
+
+
+def surface_downward_northward_stress(
+    X: xr.Dataset,
+    drag_coefficient: Optional[str] = None,
+    bulk_formula: Optional[str] = None,
+) -> xr.Dataset:
+    """Caclulate surface downward northward stress.
+
+    Parameters
+    ----------
+    X : array_like
+        Wind product data as Xarray-DataSet.
+    drag_coefficient : str, optional
+        Name of drag coefficient method, defaults to :meth:`windeval.BulkFormula`'s
+        default.
+    bulk_formula : str, optional
+        Name of bulk formula method, defaults to :meth:`windeval.BulkFormula`'s default.
+
+    Returns
+    -------
+    array_like
+        Surface downward northward stress.
+
+    """
+    X["surface_downward_northward_stress"] = BulkFormula(
+        *[s for s in [drag_coefficient, bulk_formula] if s is not None]
+    ).calculate(X, "northward_wind")
+
+    return X
+
+
+def northward_ekman_transport(X: xr.Dataset) -> xr.Dataset:
+    """Calculate meridional Ekman transport.
+
+    .. math::
+
+        M_y = -\\frac{\\tau_x}{f}
+
+    Parameters
+    ----------
+    X : array_like
+        Wind product data as Xarray-DataSet.
+
+    Returns
+    -------
+    array_like
+        Northward Ekman transport.
+
+    """
+    _has(X, "surface_downward_eastward_stress")
+
+    X["northward_ekman_transport"] = -X.surface_downward_eastward_stress / X.latitude
+
+    return X
+
+
+def eastward_ekman_transport(X: xr.Dataset) -> xr.Dataset:
+    """Calculate zonal Ekman transport.
+
+    .. math::
+
+        M_x = \\frac{\\tau_y}{f}
+
+    Parameters
+    ----------
+    X : array_like
+        Wind product data as Xarray-DataSet.
+
+    Returns
+    -------
+    array_like
+        Eastward Ekman transport.
+
+    """
+    _has(X, "surface_downward_northward_stress")
+
+    X["eastward_ekman_transport"] = X.surface_downward_northward_stress / X.latitude
+
+    return X
+
+
+def _has(X: xr.Dataset, v: str) -> None:
+    """Calculate variable `v` if missing in `X`.
+
+    Uses function defaults for calculations.
+
+    """
+    if v not in X.data_vars.keys():
+        globals()[v](X)
+
+    return None
