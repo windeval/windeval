@@ -39,6 +39,7 @@ Planned logic:
    :caption: Modules
 
    _source/importer
+   _source/wrapper
    _source/processing
    _source/analysis
 
