@@ -69,7 +69,9 @@ class BulkFormula:
             self, bulk_formula.lower()
         )
 
-    def generic(self, X: xr.Dataset, component: str) -> xr.DataArray:
+    def generic(
+        self, X: xr.Dataset, component: str, extend_ranges: Optional[bool] = None
+    ) -> xr.DataArray:
         """Definition of generic bulk formula.
 
         .. math::
@@ -83,6 +85,10 @@ class BulkFormula:
         component : str
             Name of the zonal or meridional wind component as defined by the CF_ naming
             convention.
+        extend_ranges : bool, optional
+            Fills undefined areas of the bulk formulas if `True`, returns `numpy.nan`
+            values otherwise, defaults to defaults to wrapped function default.
+
 
         Returns
         -------
@@ -90,8 +96,16 @@ class BulkFormula:
             Wind stress.
 
         """
+        d = {}
+        for x in ["extend_ranges"]:
+            if locals()[x] is None:
+                continue
+            d[x] = locals()[x]
         tau = (
-            X.air_density * self.Cd(X, component) * np.abs(X[component]) * X[component]
+            X.air_density
+            * self.Cd(X, component, **d)
+            * np.abs(X[component])
+            * X[component]
         )
 
         return tau
@@ -385,6 +399,7 @@ def surface_downward_eastward_stress(
     X: xr.Dataset,
     drag_coefficient: Optional[str] = None,
     bulk_formula: Optional[str] = None,
+    extend_ranges: Optional[bool] = None,
 ) -> xr.Dataset:
     """Caclulate surface downward eastward stress.
 
@@ -406,7 +421,7 @@ def surface_downward_eastward_stress(
     """
     X["surface_downward_eastward_stress"] = BulkFormula(
         *[s for s in [drag_coefficient, bulk_formula] if s is not None]
-    ).calculate(X, "eastward_wind")
+    ).calculate(X, "eastward_wind", *[s for s in [extend_ranges] if s is not None])
 
     return X
 
@@ -415,6 +430,7 @@ def surface_downward_northward_stress(
     X: xr.Dataset,
     drag_coefficient: Optional[str] = None,
     bulk_formula: Optional[str] = None,
+    extend_ranges: Optional[bool] = None,
 ) -> xr.Dataset:
     """Caclulate surface downward northward stress.
 
@@ -436,7 +452,7 @@ def surface_downward_northward_stress(
     """
     X["surface_downward_northward_stress"] = BulkFormula(
         *[s for s in [drag_coefficient, bulk_formula] if s is not None]
-    ).calculate(X, "northward_wind")
+    ).calculate(X, "northward_wind", *[s for s in [extend_ranges] if s is not None])
 
     return X
 
@@ -461,7 +477,9 @@ def northward_ekman_transport(X: xr.Dataset) -> xr.Dataset:
     """
     _has(X, "surface_downward_eastward_stress")
 
-    X["northward_ekman_transport"] = -X.surface_downward_eastward_stress / X.latitude
+    X[
+        "northward_ekman_transport"
+    ] = -X.surface_downward_eastward_stress / _Coriolis().parameter(X.latitude)
 
     return X
 
@@ -486,9 +504,26 @@ def eastward_ekman_transport(X: xr.Dataset) -> xr.Dataset:
     """
     _has(X, "surface_downward_northward_stress")
 
-    X["eastward_ekman_transport"] = X.surface_downward_northward_stress / X.latitude
+    X[
+        "eastward_ekman_transport"
+    ] = X.surface_downward_northward_stress / _Coriolis().parameter(X.latitude)
 
     return X
+
+
+class _Coriolis:
+    def __init__(self):
+        self.c = 2 * 2 * np.pi / ((23 * 60 + 56) * 60 + 4.1)
+
+    def parameter(self, y: xr.DataArray) -> xr.DataArray:
+        f = self.c * np.sin(np.deg2rad(y))
+
+        return f
+
+    def derivative(self, y: xr.DataArray) -> xr.DataArray:
+        b = self.c * np.cos(np.deg2rad(y))
+
+        return b
 
 
 def _has(X: xr.Dataset, v: str) -> None:
@@ -501,3 +536,67 @@ def _has(X: xr.Dataset, v: str) -> None:
         globals()[v](X)
 
     return None
+
+
+def sverdrup_transport(X: xr.Dataset) -> xr.Dataset:
+    """Calculate Sverdrup transport.
+
+    .. math::
+
+        V = \\hat{\\mathbf{k}} \\cdot \\frac{\\mathbf{\\nabla}\\times\\tau}{\\beta}
+
+    Parameters
+    ----------
+    X : array_like
+        Wind product data as Xarray-DataSet.
+
+    Returns
+    -------
+    array_like
+        Sverdrup transport.
+
+    """
+    _has(X, "surface_downward_eastward_stress")
+    _has(X, "surface_downward_northward_stress")
+
+    def mesh(X, M):
+        dims = [x for x in list(X.coords) if x not in ["longitude", "latitude"]]
+        for d in dims:
+            M = np.multiply.outer(np.ones(len(X.coords[d])), M)
+
+        return M
+
+    X["sverdrup_transport"] = (
+        [x for x in reversed(list(X.coords))],
+        np.full(X.surface_downward_northward_stress.shape, np.nan),
+    )
+
+    lon = mesh(
+        X,
+        np.outer(
+            np.ones(-1 + len(X.coords["latitude"])),
+            X.longitude.values[1:] - X.longitude.values[:-1],
+        ),
+    )
+    lat = mesh(
+        X,
+        np.outer(
+            X.latitude.values[1:] - X.latitude.values[:-1],
+            np.ones(-1 + len(X.coords["longitude"])),
+        ),
+    )
+
+    X["sverdrup_transport"][..., :-1, :-1] = (
+        (
+            X.surface_downward_northward_stress[..., 1:, :-1].values
+            - X.surface_downward_northward_stress[..., :-1, :-1].values
+        )
+        / lon
+        - (
+            X.surface_downward_eastward_stress[..., :-1, 1:].values
+            - X.surface_downward_eastward_stress[..., :-1, :-1].values
+        )
+        / lat
+    ) / _Coriolis().derivative(lat)
+
+    return X

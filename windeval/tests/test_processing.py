@@ -7,23 +7,6 @@ from windeval import processing
 
 
 @pytest.fixture
-def X():
-    ds = xr.Dataset(
-        {
-            "eastward_wind": (("x", "y"), np.array([[3], [1]])),
-            "northward_wind": (("x", "y"), np.array([[4], [np.nan]])),
-            "air_density": (("x", "y"), np.array([[1], [1]])),
-        },
-        coords={
-            "latitude": (("x", "y"), np.array([[1], [2]])),
-            "longitude": (("x", "y"), np.array([[1], [2]])),
-        },
-    )
-
-    return ds
-
-
-@pytest.fixture
 def accuracy():
     return 1e-12
 
@@ -123,8 +106,8 @@ def test_BulkFormula_K00(accuracy):
 
 def test_wind_speed(X):
     processing.wind_speed(X)
-    assert X.data_vars["wind_speed"].values[0] == 5.0
-    assert np.isnan(X.data_vars["wind_speed"].values[1])
+    assert X.data_vars["wind_speed"].values[0, 0, 0, 0] == 5.0
+    assert np.isnan(X.data_vars["wind_speed"].values[0, 0, 0, 1])
 
 
 def test_surface_downward_eastward_stress(X):
@@ -132,8 +115,14 @@ def test_surface_downward_eastward_stress(X):
         X, drag_coefficient="ncep_ncar_2007", bulk_formula="generic"
     )
     y = 1.3e-3 * X.eastward_wind ** 2
-    assert X.data_vars["surface_downward_eastward_stress"].values[0] == y[0]
-    assert X.data_vars["surface_downward_eastward_stress"].values[1] == y[1]
+    assert (
+        X.data_vars["surface_downward_eastward_stress"].values[0, 0, 0, 0]
+        == y[0, 0, 0, 0]
+    )
+    assert (
+        X.data_vars["surface_downward_eastward_stress"].values[0, 0, 0, 1]
+        == y[0, 0, 0, 1]
+    )
 
 
 def test_surface_downward_northward_stress(X):
@@ -141,8 +130,11 @@ def test_surface_downward_northward_stress(X):
         X, drag_coefficient="ncep_ncar_2007", bulk_formula="generic"
     )
     y = 1.3e-3 * X.northward_wind ** 2
-    assert X.data_vars["surface_downward_northward_stress"].values[0] == y[0]
-    assert np.isnan(X.data_vars["surface_downward_northward_stress"].values[1])
+    assert (
+        X.data_vars["surface_downward_northward_stress"].values[0, 0, 0, 0]
+        == y[0, 0, 0, 0]
+    )
+    assert np.isnan(X.data_vars["surface_downward_northward_stress"].values[0, 0, 0, 1])
 
 
 def test_northward_ekman_transport(X):
@@ -150,9 +142,13 @@ def test_northward_ekman_transport(X):
         X, drag_coefficient="ncep_ncar_2007", bulk_formula="generic"
     )
     processing.northward_ekman_transport(X)
-    y = -1.3e-3 * X.eastward_wind ** 2 / X.latitude
-    assert X.data_vars["northward_ekman_transport"].values[0] == y[0]
-    assert X.data_vars["northward_ekman_transport"].values[1] == y[1]
+    y = (
+        -1.3e-3
+        * X.eastward_wind.values[0, 0, 0, :2] ** 2
+        / processing._Coriolis().parameter(X.latitude.values[0])
+    )
+    assert X.data_vars["northward_ekman_transport"].values[0, 0, 0, 0] == y[0]
+    assert X.data_vars["northward_ekman_transport"].values[0, 0, 0, 1] == y[1]
 
 
 def test_eastward_ekman_transport(X):
@@ -160,13 +156,29 @@ def test_eastward_ekman_transport(X):
         X, drag_coefficient="ncep_ncar_2007", bulk_formula="generic"
     )
     processing.eastward_ekman_transport(X)
-    y = 1.3e-3 * X.northward_wind ** 2 / X.latitude
-    assert X.data_vars["eastward_ekman_transport"].values[0] == y[0]
-    assert np.isnan(X.data_vars["eastward_ekman_transport"].values[1])
+    y = (
+        1.3e-3
+        * X.northward_wind.values[0, 0, 0, 0] ** 2
+        / processing._Coriolis().parameter(X.latitude.values[0])
+    )
+    assert X.data_vars["eastward_ekman_transport"].values[0, 0, 0, 0] == y
+    assert np.isnan(X.data_vars["eastward_ekman_transport"].values[0, 0, 0, 1])
 
 
 def test_eastward_ekman_transport_v2(X):
     processing.eastward_ekman_transport(X)
-    y = 1.3e-3 * X.northward_wind ** 2 / X.latitude
-    assert X.data_vars["eastward_ekman_transport"].values[0] == y[0]
-    assert np.isnan(X.data_vars["eastward_ekman_transport"].values[1])
+    y = (
+        1.3e-3
+        * X.northward_wind.values[0, 0, 0, 0] ** 2
+        / processing._Coriolis().parameter(X.latitude.values[0])
+    )
+    assert X.data_vars["eastward_ekman_transport"].values[0, 0, 0, 0] == y
+    assert np.isnan(X.data_vars["eastward_ekman_transport"].values[0, 0, 0, 1])
+
+
+def test_sverdrup_transport(X):
+    processing.sverdrup_transport(X)
+    assert math.isclose(
+        X.sverdrup_transport[0, 0, 0, 0].values, -62.40566775, rel_tol=1e-7
+    )
+    assert np.isnan(X.data_vars["sverdrup_transport"].values[0, 0, 0, 1])
