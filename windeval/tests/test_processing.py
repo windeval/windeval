@@ -182,3 +182,13 @@ def test_sverdrup_transport(X):
         X.sverdrup_transport[0, 0, 0, 0].values, -62.40566775, rel_tol=1e-7
     )
     assert np.isnan(X.data_vars["sverdrup_transport"].values[0, 0, 0, 1])
+
+
+def test_conversions(X):
+    with pytest.raises(NotImplementedError):
+        processing.conversions({"ds": X})
+
+
+def test_diagnostics(X):
+    with pytest.raises(NotImplementedError):
+        processing.diagnostics({"ds": X})
