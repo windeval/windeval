@@ -2,7 +2,7 @@
 
 import numpy as np
 import xarray as xr
-from typing import Callable, Union, Optional
+from typing import Callable, Union, Optional, Dict, Any
 
 
 class BulkFormula:
@@ -600,3 +600,15 @@ def sverdrup_transport(X: xr.Dataset) -> xr.Dataset:
     ) / _Coriolis().derivative(lat)
 
     return X
+
+
+def conversions(
+    wndpr: Dict[str, xr.Dataset], *args: Any, **kwargs: Dict[str, Any]
+) -> Dict[str, xr.Dataset]:
+    raise NotImplementedError("Conversions are not yet implemented.")
+
+
+def diagnostics(
+    wndpr: Dict[str, xr.Dataset], *args: Any, **kwargs: Dict[str, Any]
+) -> Dict[str, xr.Dataset]:
+    raise NotImplementedError("Diagnostics are not yet implemented.")
