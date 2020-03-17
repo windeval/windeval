@@ -1,14 +1,18 @@
-from . import toolbox, processing, plotting
-from .processing import conversions, diagnostics
-from .io.api import open_product, select, info, plot, report
+from . import processing, plotting
+from .io import api as io
+from .processing import diagnostics, conversions
+from .plotting import plot
+from .io.api import open_product, save_product, select, info, report
 
 __all__ = [
     # modules
-    "toolbox",
+    "api",
+    "io",
     "processing",
     "plotting",
-    # functions
+    # core functions
     "open_product",
+    "save_product",
     "info",
     "select",
     "conversions",

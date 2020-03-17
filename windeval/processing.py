@@ -1,8 +1,12 @@
-"""Preprocessing module."""
+"""
+Preprocessing module.
+"""
 
 import numpy as np
 import xarray as xr
-from typing import Callable, Union, Optional, Dict, Any
+from functools import singledispatch
+from scipy import signal
+from typing import Callable, Union, Optional, Dict, Any, Iterable
 
 
 class BulkFormula:
@@ -602,13 +606,74 @@ def sverdrup_transport(X: xr.Dataset) -> xr.Dataset:
     return X
 
 
-def conversions(
-    wndpr: Dict[str, xr.Dataset], *args: Any, **kwargs: Dict[str, Any]
-) -> Dict[str, xr.Dataset]:
-    raise NotImplementedError("Conversions are not yet implemented.")
+class Conversions:
+    def __init__(self):
+        raise NotImplementedError("Conversions are not yet implemented.")
 
 
-def diagnostics(
-    wndpr: Dict[str, xr.Dataset], *args: Any, **kwargs: Dict[str, Any]
+@singledispatch
+def conversions(*args, **kwargs):
+    raise NotImplementedError("Data type not supported for conversion.")
+
+
+class Diagnostics:
+    @staticmethod
+    def welch(da: xr.DataArray, *args: Any, **kwargs: Dict[str, Any]) -> xr.Dataset:
+        f, psd = signal.welch(da.values.flat, *args, **kwargs)
+        ds = xr.Dataset(
+            {"power_spectral_density": ("frequency", psd)},
+            coords={"frequency": (["frequency"], f)},
+        )
+
+        return ds
+
+
+@singledispatch
+def diagnostics(*args, **kwargs):
+    raise NotImplementedError("Data type not supported.")
+
+
+@diagnostics.register
+def _(da: xr.DataArray, diag: str, *args: Any, **kwargs: Dict[str, Any]) -> xr.Dataset:
+    if getattr(Diagnostics, diag, None) is not None:
+        y = getattr(Diagnostics, diag)(da, *args, **kwargs)
+    elif getattr(da, diag, None) is not None:
+        y = getattr(da, diag)(*args, **kwargs)
+    else:
+        raise ValueError("Unknown diagnostic.")
+
+    return y
+
+
+@diagnostics.register  # type: ignore
+def _(
+    ds: xr.Dataset, var: str, diag: str, *args: Any, **kwargs: Dict[str, Any]
+) -> xr.Dataset:
+    ds = ds.merge(diagnostics(ds[var], diag, *args, **kwargs))
+
+    return ds
+
+
+@diagnostics.register  # type: ignore
+def _(
+    wnddict: dict,
+    var: str,
+    diag: str,
+    *args: Any,
+    dataset: Optional[Iterable] = None,
+    **kwargs: Dict[str, Any]
 ) -> Dict[str, xr.Dataset]:
-    raise NotImplementedError("Diagnostics are not yet implemented.")
+
+    if dataset is None:
+        dataset = wnddict.keys()
+    else:
+        raise NotImplementedError(
+            "Specifing a dataset for diagnostics is not implemented yet."
+        )
+
+    for wndkey in dataset:
+        wnddict[wndkey] = wnddict[wndkey].merge(
+            diagnostics(wnddict[wndkey][var], diag, *args, **kwargs)
+        )
+
+    return wnddict

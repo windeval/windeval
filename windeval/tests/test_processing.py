@@ -190,5 +190,5 @@ def test_conversions(X):
 
 
 def test_diagnostics(X):
-    with pytest.raises(NotImplementedError):
-        processing.diagnostics({"ds": X})
+    ds = processing.diagnostics({"ds": X}, "eastward_wind", "welch")
+    assert isinstance(ds["ds"]["power_spectral_density"], xr.DataArray)
