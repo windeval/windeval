@@ -1,44 +1,6 @@
-"""Wrapper."""
-
 import xarray as xr
-from functools import singledispatch
-from typing import Optional, Any, Dict, List
+from typing import Optional
 from . import processing
-
-
-@singledispatch
-def calculate(ds, *args, **kwargs):
-    raise NotImplementedError("Data type not supported.")
-
-
-@calculate.register
-def _(
-    ds: xr.Dataset, var: str, diag: str, *args: Any, **kwargs: Dict[str, Any]
-) -> xr.DataArray:
-    return calculate(ds[var], diag, *args, **kwargs)
-
-
-@calculate.register  # type: ignore
-def _(
-    da: xr.DataArray, diag: str, *args: Any, **kwargs: Dict[str, Any]
-) -> xr.DataArray:
-
-    f = getattr(processing, diag, None)
-    if f is not None:
-        y = f(da, *args, **kwargs)
-    else:
-        y = getattr(da, diag)(*args, **kwargs)
-
-    return y
-
-
-@calculate.register  # type: ignore
-def _(
-    d: dict, keys: List[str], diag: str, *args: Any, **kwargs: Dict[str, Any]
-) -> xr.DataArray:
-
-    f = getattr(processing, diag)
-    return f(*[d[k] for k in keys], *args, **kwargs)
 
 
 def ekman(
