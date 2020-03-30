@@ -1,4 +1,5 @@
 import pytest
+
 from windeval.io import reports
 
 

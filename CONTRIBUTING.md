@@ -21,7 +21,7 @@ If you wish to contribute to the windeval project you need to
     # or use the https path
     # git clone https://git.geomar.de/wind-products/windeval.git
     ```
-    
+
 2. Optional, you may choose to use the Conda environment used during pipeline testing:
 
     ```bash
@@ -156,4 +156,3 @@ In the windeval project Black is chosen as formatting tool using its default set
 > _Black_ makes code review faster by producing the smallest diffs possible. Blackened code looks the same regardless of the project you're reading. Formatting becomes transparent after a while and you can focus on the content instead.
 >
 > [(source)](https://black.readthedocs.io/en/stable/)
-

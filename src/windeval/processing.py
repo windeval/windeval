@@ -2,11 +2,13 @@
 Preprocessing module.
 """
 
+from functools import singledispatch
+from typing import Any, Callable, Dict, Iterable, Optional, Union
+
 import numpy as np
 import xarray as xr
-from functools import singledispatch
+
 from scipy import signal
-from typing import Callable, Union, Optional, Dict, Any, Iterable
 
 
 class BulkFormula:
@@ -58,10 +60,9 @@ class BulkFormula:
         | A. Köhl and P. Heimbach, August 15, 2007.
     .. [CF]
         | *CF Standard Name Table*.
-        | http://cfconventions.org/Data/cf-standard-names/70/build/cf-standard-name-table.html
+        | http://cfconventions.org/Data/cf-standard-names/70/build/cf-standard-name-table.html # noqa: B950
 
-
-    """  # noqa: E501
+    """
 
     def __init__(
         self, drag_coefficient: str = "ncep_ncar_2007", bulk_formula: str = "generic"

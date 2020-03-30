@@ -2,4 +2,11 @@
 __pycache__
 .ipynb_checkpoints/
 .coverage
+coverage*
 *.pyc
+.tox/
+dist/
+.pytest_cache
+.mypy_cache
+
+.vscode/

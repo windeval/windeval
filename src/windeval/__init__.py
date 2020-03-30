@@ -1,12 +1,12 @@
-from . import processing, plotting
+from . import plotting, processing
 from .io import api as io
-from .processing import diagnostics, conversions
+from .io.api import info, open_product, report, save_product, select
 from .plotting import plot
-from .io.api import open_product, save_product, select, info, report
+from .processing import conversions, diagnostics
+
 
 __all__ = [
     # modules
-    "api",
     "io",
     "processing",
     "plotting",

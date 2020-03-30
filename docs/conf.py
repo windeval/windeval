@@ -13,7 +13,8 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath("../."))
+
+sys.path.insert(0, os.path.abspath("../src/."))
 
 
 # -- Project information -----------------------------------------------------
@@ -31,21 +32,33 @@ release = "0.1.0"
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
+
 extensions = [
     "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.extlinks",
+    "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
-    "sphinx_autodoc_typehints",
+    "numpydoc",
     "sphinx_rtd_theme",
     "recommonmark",
 ]
 
+autosummary_generate = True
+autodoc_typehints = "none"
+
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = False
+napoleon_use_param = True
+napoleon_use_rtype = True
+
+numpydoc_class_members_toctree = True
+numpydoc_show_class_members = False
+
 # Disable module names in auto documentation
 add_module_names = False
-
-# Type hints
-set_type_checking_flag = False  # defaults to False
-typehints_fully_qualified = True  # defaults to False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

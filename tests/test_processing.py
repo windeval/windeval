@@ -1,8 +1,10 @@
-import math
-import pytest
 import inspect
+import math
+
 import numpy as np
+import pytest
 import xarray as xr
+
 from windeval import processing
 
 

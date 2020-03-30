@@ -1,7 +1,8 @@
-import xarray as xr
 from functools import singledispatch
-from typing import Dict, Any, Union, List, Optional
+from typing import Any, Dict, List, Optional, Union
+
 import matplotlib.pyplot as plt
+import xarray as xr
 
 
 class Plot:

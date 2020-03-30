@@ -1,0 +1,39 @@
+name: Test # https://github.com/sdispater/pendulum/blob/master/.github/workflows/tests.yml
+
+on: [push, pull_request]
+
+jobs:
+  Testing:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.7, 3.8]
+    steps:
+      - uses: actions/checkout@v2 # https://github.com/actions/checkout
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v1 # https://github.com/actions/setup-python
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Get full python version
+        id: full-python-version
+        run: |
+          echo ::set-output name=version::$(python -c "import sys; print('-'.join(str(v) for v in sys.version_info))")
+      - name: Install and set up Poetry # https://github.com/python-poetry/poetry
+        run: |
+          curl -fsS -o get-poetry.py https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py
+          python get-poetry.py --preview -y
+          source $HOME/.poetry/env
+          poetry config virtualenvs.in-project true
+      - name: Set up cache
+        uses: actions/cache@v1 # https://github.com/actions/cache
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.full-python-version.outputs.version }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Install dependencies
+        run: |
+          source $HOME/.poetry/env
+          poetry install
+      - name: Test
+        run: |
+          source $HOME/.poetry/env
+          poetry run pytest
