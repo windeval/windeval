@@ -2,7 +2,7 @@
 name = "windeval"
 version = "0.1.0"
 description = ""
-authors = ["R.H.H.E. <windeval@gmail.com>"]
+authors = ["windeval developers <windeval@googlegroups.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.7"
@@ -28,9 +28,9 @@ sphinx_rtd_theme = "^0.4.3"
 
 [tool.isort]
 atomic = true
-line_length = 88
+line_length = 88  # to comply with Black
 filter_files = true
-multi_line_output = 3
+multi_line_output = 3  # to comply with Black
 use_parentheses = true
 lines_after_imports = 2
 lines_between_types = 1
