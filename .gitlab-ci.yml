@@ -6,10 +6,7 @@ pytest_and_coverage:
   stage: test
   script:
     - pip install .
-    - |
-      pytest -v \
-        --cov=src --cov-report="term-missing" \
-        tests/
+    - pytest
 
 lint:
   stage: test
