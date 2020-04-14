@@ -9,7 +9,7 @@ pytest_and_coverage:
     - |
       pytest -v \
         --cov=src --cov-report="term-missing" \
-        windeval/tests/
+        tests/
 
 lint:
   stage: test
