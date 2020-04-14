@@ -5,25 +5,25 @@ before_script:
 pytest_and_coverage:
   stage: test
   script:
-    - pip install -e .
+    - pip install .
     - |
       pytest -v \
-        --cov=windeval --cov-report="term-missing" \
+        --cov=src --cov-report="term-missing" \
         windeval/tests/
 
 lint:
   stage: test
   allow_failure: false
   script:
-    - flake8 windeval/ --max-line-length=88
-    - black --check windeval/
+    - flake8 src/ --max-line-length=88
+    - black --check src/
 
 pages:
   stage: deploy
   script:
     - apt-get update && apt-get install make
     - pip install sphinx recommonmark sphinx_rtd_theme sphinx-autodoc-typehints
-    - cd doc/
+    - cd docs/
     - make clean
     - make html
     - cd ..
